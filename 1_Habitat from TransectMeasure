@@ -1,0 +1,275 @@
+###### Importing BRUV Habitat points from TransectMeasure (Stereo)----
+
+
+### Written by Tim Langlois 
+### Any errors are due to Tim Langlois
+### Please forward any updates and improvements to timothy.langlois@uwa.edu.au
+
+
+### Designed to take direct output from an TransectMeasure project. 
+
+### objective is to 
+# 1 Import and combine data from .txt file data collected in a 4 x 5 grid of CATAMI codes
+# 2 Make % scores and levels for different groups
+#   -%Profile levels
+#     -%Biota levels
+#       This can be done for Broad and type and morphology?
+#     -%FOV
+#     -Class FOV
+#       Mean and SD of Profile
+
+
+# Where the data sits-----
+setwd("C:/Tims Documents/ownCloud/MEG_Appo_BRUV_2014/Data")
+
+
+#Read in data and check format - here we are importing .txt. output from TM. We have to skip the first rows of file as this has EM headers AND we dont want character values to be Factors!
+
+hab1<-read.delim('Philippines_APO Bruvs_Dot Point Measurements.TXT',header=T,skip=4,stringsAsFactors=FALSE)
+
+# To check and reformat ----
+# - some of names have lower or upper case?
+head(hab1)
+
+str(hab1)
+names(hab1)
+
+# Convert to lower case
+names(hab1)<-tolower(names(hab1))
+
+# Reformat filenames/OpCode----
+library(stringr)
+hab1$OpCode<-str_replace_all(hab1$filename, "[.jpg_]", "")
+unique(hab1$OpCode)
+
+# Remove unused colums----
+tail(hab1)
+hab2<-subset(hab1,select=-c(x,x.1,frame,time..mins.,date,location,site..,transect..,latitude,longitude,rugosity,depth,collector,fishing.status,spare,spare.1,species_code))
+head(hab2)
+str(hab2)
+names(hab2)
+unique(hab2$OpCode)
+
+# CREATE FOV classification----
+names(hab2)
+head(hab2)
+FOV.table<-xtabs(~ OpCode + fov, data=hab2)
+FOV.table2<-prop.table(FOV.table, 1)     
+head(FOV.table2)
+FOV.table3<-as.data.frame.matrix(FOV.table2)
+head(FOV.table3)
+FOV.table3$OpCode <- rownames(FOV.table3)
+names(FOV.table3)
+FOV<-FOV.table3
+names(FOV) <- sub(" ", ".", names(FOV))
+names(FOV)
+FOV$FOV.Class<-FOV$Open
+
+# Transform FOV
+FOV <- transform(FOV, FOV.Class = ifelse(Facing.Up > 0.5, "Facing Up",FOV.Class))
+# FOV <- transform(FOV, FOV.Class = ifelse(Facing.Down > 0.5, "Facing Down",FOV.Class))
+# FOV <- transform(FOV, FOV.Class = ifelse(Limited > 0.5, "Limited",FOV.Class))
+FOV <- transform(FOV, FOV.Class = ifelse(Open > 0.5, "Open",FOV.Class))
+head(FOV)
+FOV2<-subset(FOV,select=c('OpCode','FOV.Class'))
+head(FOV2)
+
+
+# CREATE %FOV _ Could use this to limit?----
+names(hab2)
+
+unique(hab2$catami_broad) #Could use No biota here?
+unique(hab2$catami_morphology) #Actually Open Water is better classification here
+FOV.percent.table<-xtabs(~ OpCode + catami_morphology, data=hab2)
+head(FOV.percent.table)
+FOV.percent.table2<-prop.table(FOV.percent.table, 1)     
+head(FOV.percent.table2)
+FOV.percent<-as.data.frame.matrix(FOV.percent.table2)
+FOV.percent$OpCode <- rownames(FOV.percent)
+names(FOV.percent) <- sub(" ", ".", names(FOV.percent))
+head(FOV.percent)
+FOV.percent2<-subset(FOV.percent,select=c('OpCode','Open.Water'))
+head(FOV.percent2)
+
+
+# Remove NO BIOTA to create Profile and Habitat summaries-----
+'%ni%' <- Negate('%in%')
+names(hab2)
+head(hab2)
+unique(hab2$relief)
+unique(hab2$catami_broad)
+
+hab3<-subset(hab2,catami_broad%ni%"No Biota" & relief%ni%"")
+head(hab3)
+unique(hab3$catami_broad)
+unique(hab3$relief)
+
+# CREATE Relief------
+# Where catami_broad=No Biota - there should be no releif
+# unique
+relief.table<-xtabs(~ OpCode + relief, data=hab3) 
+relief.table2<-prop.table(relief.table, 1)     
+head(relief.table2)
+relief<-as.data.frame.matrix(relief.table2)
+names(relief)
+colnames(relief) <- paste("Profile", colnames(relief), sep = "_")
+relief1 = relief[,colSums(relief) > 0.1]
+relief1$OpCode <- rownames(relief1)
+names(relief1)
+head(relief1)
+
+
+# CREATE Mean Relief------
+# Where catami_broad=No Biota - there should be no releif
+
+
+m.relief<-subset(hab3,select=c('OpCode','image.row','image.col','relief'))
+head(m.relief)
+unique(m.relief$relief)
+m.relief$relief.score<-m.relief$relief
+# Transform FOV
+m.relief <- transform(m.relief, relief.score = ifelse(relief == "Flat", 1,relief.score))
+m.relief <- transform(m.relief, relief.score = ifelse(relief == "Low", 2,relief.score))
+m.relief <- transform(m.relief, relief.score = ifelse(relief == "Medium", 3,relief.score))
+m.relief <- transform(m.relief, relief.score = ifelse(relief == "High", 4,relief.score))
+# mean and SD of relief
+head(m.relief)
+
+  
+
+m.relief$relief.score<-as.numeric(m.relief$relief.score)
+str(m.relief)
+library(plyr)
+m.relief.sd <- ddply(m.relief, .(OpCode), summarise, 
+                   Mean.Relief    = mean(relief.score),
+                   SD.Relief    = sd(relief.score))
+head(m.relief.sd,50)
+m.relief.sd["SD.Relief"][is.na(m.relief.sd["SD.Relief"])] <- 0
+
+
+# CREATE catami_broad------
+broad.table<-xtabs(~ OpCode + catami_broad, data=hab3) 
+broad.table2<-prop.table(broad.table, 1)     
+head(broad.table2)
+broad<-as.data.frame.matrix(broad.table2)
+names(broad)
+colnames(broad) <- paste("Broad", colnames(broad), sep = "_")
+broad1 = broad[,colSums(broad) > 0.2]
+broad1$OpCode <- rownames(broad1)
+names(broad1) <- sub(" ", ".", names(broad1))
+head(broad1)
+names(broad1)
+
+# CREATE catami_broadmorph----
+hab3$BroadMorph <- paste(hab3$catami_broad, hab3$catami_morphology, sep='_') 
+morph.table<-xtabs(~ OpCode + BroadMorph, data=hab3) 
+morph.table2<-prop.table(morph.table, 1)     
+head(morph.table2)
+morph<-as.data.frame.matrix(morph.table2)
+names(morph)
+colnames(morph) <- paste("Morph", colnames(morph), sep = "_")
+morph1 = morph[,colSums(morph) > 0.1]
+morph1$OpCode <- rownames(morph1)
+names(morph1) <- sub(" ", ".", names(morph1))
+head(morph1)
+
+
+# COMBINE to make habitat data by OpCode-----
+head(FOV2)
+head(FOV.percent2)
+# head(relief1)
+head(m.relief.sd)
+head(broad1)
+head(morph1)
+library(reshape2)
+hab.OpCode1<-merge(FOV2,FOV.percent2,by = "OpCode",all = TRUE)
+# hab.OpCode2<-merge(hab.OpCode1,relief1,by = "OpCode",all = TRUE)
+hab.OpCode3<-merge(hab.OpCode1,m.relief.sd,by = "OpCode",all = TRUE)
+hab.OpCode4<-merge(hab.OpCode3,broad1,by = "OpCode",all = TRUE)
+# Currently not inlcuding broad_morph
+# hab.OpCode5<-merge(hab.OpCode3,morph1,by = "OpCode",all = TRUE)
+names(hab.OpCode4)
+
+tail(hab.OpCode4,50)
+unique(hab.OpCode4$SD.Relief)
+
+
+# CHECK the output----
+# OpCodeToCheck<-subset(hab.OpCode4,FOV.Class%in%c("Facing Down","Facing Up"))
+# head(OpCodeToCheck) #Send these ones back to the analysts to double check and then re-import data
+# Do we want to keep any of these?
+# write.csv(OpCodeToCheck,"OpCodeToCheck.csv")
+
+head(hab.OpCode4)
+
+
+# Table to see range of Open field of view and good Benthos imagery----
+t2<-with(hab.OpCode4,(table(FOV.Class,Open.Water)))
+print(t2)
+
+# Bring in list of OpCodes to keep - as we cant currently update their FOV in TM----
+# setwd("C:/Tims Documents/ownCloud/PMCP_Longshore_2014_Scripts/Data")
+# setwd("C:/Users/pretallack/ownCloud/Shared/PMCP_Longshore_2014_Scripts/Data")
+# keep<-read.csv("OpCodeToCheck_ET.csv")
+
+# head(keep)
+# keep1<-keep[keep$Include=="Yes","OpCode"]
+
+
+# Choose only to get rid of those Facing up and Facing Down BUT keep OpCodes now OK FOV----
+hab.OpCode5<-subset(hab.OpCode4, FOV.Class%ni%c("Facing Down","Facing Up"))
+# CHoose not to get rid of facing up
+hab.OpCode5<-hab.OpCode4
+
+# hab.OpCode5<-subset(hab.OpCode4, FOV.Class%ni%c("Facing Down","Facing Up")|OpCode%in%keep1)
+# 
+unique(hab.OpCode5$OpCode)
+head(hab.OpCode5)
+
+# TIM EDITS
+# CHECK the output----
+check_DF <- subset(hab.OpCode5, is.na(hab.OpCode5$Broad_2_Macroalgae))
+head(check_DF,10)
+# There are 0 rows of NA's in here'
+
+# edit(check_DF)
+
+# IF you want to get rid of NA's run this----
+# hab.OpCode5[is.na(hab.OpCode5)] <- 0 #do if want to remove NA rows?
+# 
+
+# Then get rid of FOV.Class and unused----
+# hab.OpCode6<-subset(hab.OpCode5,select=-c(FOV.Class,Open.Water))
+# Keep these classes for this case
+hab.OpCode6<-hab.OpCode5
+head(hab.OpCode6)
+
+
+
+# Subset data for those with good field of Open field of view and good Benthos imagery----
+t2<-with(hab.OpCode4,(table(FOV.Class,Open.Water)))
+print(t2)
+
+head(hab.OpCode7)
+
+hab.OpCode7<-hab.OpCode6
+
+# Rename variables----
+
+# colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Mean.Relief"] <- "Mean Relief"
+# colnames(hab.OpCode7)[colnames(hab.OpCode7)=="SD.Relief"] <- "SD Relief"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_1_Hard.Corals"] <- "Hard.Corals"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_2_Macroalgae"] <- "Macroalgae"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_3_Consoldated.Substrate"] <- "Rocky.Bottom"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_4_Unconsoldated.Substrate"] <- "Sand/Rubble"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_Seagrasses"] <- "Seagrass"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_Soft.Corals"] <- "Soft.Corals"
+colnames(hab.OpCode7)[colnames(hab.OpCode7)=="Broad_Sponges"] <- "Sponges"
+
+## Add Reef category
+head(hab.OpCode7)
+hab.OpCode7$Reef<-rowSums(hab.OpCode7[,c("Rocky.Bottom","Hard.Corals","Macroalgae")])
+
+
+# Write final habitat data----
+write.csv(hab.OpCode7, file=paste(Sys.Date(),"Appo_Habitat.csv",sep = "_"), row.names=FALSE)
