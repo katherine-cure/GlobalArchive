@@ -1,0 +1,60 @@
+
+# # Additional Check to see how many MaxN per Taxa and missing from LMaxN----
+# # With simple Taxa.MaxN vs Taxa.LMaxN? but only where OpCode match?
+# # With a plot??
+# head(MaxN.Fam.hab.L)
+# head(LMaxN.Fam.hab.L)
+# MaxN.Fam.hab.L$Data<-"MaxN"
+# LMaxN.Fam.hab.L$Data<-"Length"
+# # subset to where OpCode match
+# LOpCode<-unique(LMaxN.Fam.hab.L$OpCode)
+# MOpCode<-unique(MaxN.Fam.hab.L$OpCode)
+# MaxN.Fam.hab.Lmatch<-subset(MaxN.Fam.hab.L,OpCode%in%LOpCode)
+# LMaxN.Fam.hab.Lmatch<-subset(LMaxN.Fam.hab.L,OpCode%in%MOpCode) #has no effect as expected
+# 
+# allMaxN.Fam.hab.L<-rbind(MaxN.Fam.hab.Lmatch,LMaxN.Fam.hab.Lmatch)
+# MaxNCheck<-subset(allMaxN.Fam.hab.L,select=c(Data,MaxN,Family,OpCode))
+# head(MaxNCheck)
+# detach("package:reshape", unload=TRUE) #this fixes names of value problem
+# library(reshape2)
+# MaxNCheck.W <- dcast(MaxNCheck,OpCode+Family~Data,value.var="MaxN",fun.aggregate=sum)
+# 
+# head(MaxNCheck.W)
+# str(MaxNCheck.W)
+# 
+# # Plot of check----
+# setwd("C:/Tims Documents/ownCloud/Shared/?/Plots")
+# library(ggplot2)
+# library(gridExtra)
+# 
+# # want MaxN on x and Length on Y
+# ggMaxNCheckzoomin<-ggplot(data=subset(MaxNCheck.W,Family%in%c("Serranidae","Lethrinidae","Lutjanidae","Scaridae")),aes(x=MaxN,y=Length,colour=Family))+
+#   geom_point()+
+#   geom_text(aes(label=OpCode),hjust=0, vjust=0)+
+#   theme(legend.direction = "horizontal", legend.position = "bottom")+
+#   geom_abline()+
+#   coord_cartesian(xlim = c(0,15), ylim = c(0,15))
+# 
+# ggMaxNCheckzoomin
+# 
+# ggMaxNCheckzoomout<-ggplot(data=subset(MaxNCheck.W,Family%in%c("Serranidae","Lethrinidae","Lutjanidae","Scaridae")),aes(x=MaxN,y=Length,colour=Family))+
+#   geom_point()+
+#   geom_text(aes(label=OpCode),hjust=0, vjust=0)+
+#   theme(legend.direction = "horizontal", legend.position = "bottom")+
+#   geom_abline()+
+#   xlim(0, 45)+
+#   ylim(0, 45)
+# # coord_equal()
+# 
+# ggMaxNCheckzoomout
+# 
+# grid.arrange(ggMaxNCheckzoomin, ggMaxNCheckzoomout,ncol=2)
+# ggMaxNCheck<-arrangeGrob(ggMaxNCheckzoomin, ggMaxNCheckzoomout,ncol=2)
+# 
+# # Save plot as .jpeg
+# ggsave(file=paste(Sys.Date(),"ggMaxNCheck.png"), ggMaxNCheck,width = 16, height = 8,units = "in")
+# # # Save plot as .pdf
+# # ggsave(file="2015_2_25_Figure_6.pdf", Figure_6,width = 10, height = 8,units = "in")
+# # # Save plot as .eps - i can't tell if these are any good?
+# # ggsave(file="2015_2_25_Figure_6.eps", Figure_6,width = 10, height = 8,units = "in", device=cairo_ps)
+# 
