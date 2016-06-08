@@ -30,7 +30,6 @@ library(tidyr)
 library(dplyr)
 options(dplyr.width = Inf) #enables head() to display all coloums
 library(ggplot2)
-library(readxl)
 library(googlesheets)
 
 
@@ -43,9 +42,6 @@ data.dir=("C:/Tims Documents/ownCloud/PMCP_Sharks_Synthesis")
 
 ga.check=paste(data.dir,"Data/GA to check",sep="/")
 tidy.data=paste(data.dir,"Data/Tidy data",sep="/")
-
-life.history=("~/ownCloud/MEG_Fish_LifeHistory")
-life.history=("C:/Tims Documents/ownCloud/MEG_Fish_LifeHistory")
 
 
 # Read in the data----
@@ -74,9 +70,7 @@ head(master,7)
 str(master)
 names(master)
 
-# library(magrittr) # force certain columns to be numeric #not need if importing from google sheets
-# cols = c(13, 14, 15, 17,18,21,22,25,26) 
-# master[,cols] %<>% lapply(function(x) as.numeric(x))
+
 
 # Make complete master and length data with no 3D points
 master<-master%>%
