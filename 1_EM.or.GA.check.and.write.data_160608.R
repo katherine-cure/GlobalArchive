@@ -36,7 +36,6 @@ library(plyr) #need to laod before dplyr()
 library(dplyr)
 options(dplyr.width = Inf) #enables head() to display all coloums
 library(ggplot2)
-library(readxl)
 library(googlesheets)
 
 
@@ -64,9 +63,6 @@ data.dir=("C:/Tims Documents/ownCloud/PMCP_Sharks_Synthesis")
 ga.export=paste(data.dir,"Data/GA export",sep="/")
 ga.check=paste(data.dir,"Data/GA to check",sep="/")
 tidy.data=paste(data.dir,"Data/Tidy data",sep="/")
-
-# life.history=("~/ownCloud/MEG_Fish_LifeHistory")
-life.history=("C:/Tims Documents/ownCloud/MEG_Fish_LifeHistory")
 
 
 # Loop in MaxN files----
@@ -218,18 +214,13 @@ ggplot(data=length, aes(as.numeric(Range))) +
 
 # SERIOUS data checking to compare taxa and min/max lengths----
 # # Read in Species list to compare against----
-# Using life history from excel
-setwd(life.history)
-dir()
-# master<-read_excel("2016-04-21_PMCP_master.species.xlsx")
-
 # using life history from google sheets
 (my_sheets <- gs_ls())
 GlobalArchive_Life.history <- gs_title("GlobalArchive_Life history")#register a sheet
 master<-GlobalArchive_Life.history%>%
   gs_read_csv(ws = "Life history")
 
-
+head(master)
 str(master)
 
 
@@ -243,9 +234,9 @@ maxn$Genus_species <- gsr(maxn$Genus_species, change$Genus_species, change$Chang
 length$Genus_species <- gsr(length$Genus_species, change$Genus_species, change$Change.to)
 
 
-
 # Check for taxa.not.match----
 setwd(ga.check)
+
 
 x<-"maxn.taxa.not.match" #a quick look at taxa that do not match master list
 maxn.taxa.not.match<-
