@@ -64,7 +64,9 @@ dir()
 (my_sheets <- gs_ls())
 GlobalArchive_Life.history <- gs_title("GlobalArchive_Life history")#register a sheet
 master<-GlobalArchive_Life.history%>%
-  gs_read_csv(ws = "Life history")
+  gs_read_csv(ws = "Life history")%>%
+  filter(grepl('Australia', Global.region))%>%
+  filter(grepl('Ningaloo|Pilbara', Local.region))
 
 head(master,7)
 str(master)
